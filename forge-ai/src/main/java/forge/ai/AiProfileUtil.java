@@ -199,7 +199,10 @@ public class AiProfileUtil {
      * currently available ones.
      */
     public static String getRandomProfile() {
-        return Aggregates.random(getAvailableProfiles());
+        // never pick the Claude profile at random: it makes paid API calls, so it must be chosen deliberately
+        List<String> profiles = getAvailableProfiles();
+        profiles.removeIf(LobbyPlayerAi.CLAUDE_PROFILE::equalsIgnoreCase);
+        return Aggregates.random(profiles);
     }
 
     /**

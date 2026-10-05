@@ -161,6 +161,8 @@ public final class FModel {
     private static final Supplier<ItemPool<PaperCard>> stickerSheetPool = Suppliers.memoize(() -> ItemPool.createFrom(getMagicDb().getVariantCards().getAllCards(PaperCardPredicates.fromRules(CardRulesPredicates.IS_STICKER_SHEET)), PaperCard.class));
 
     public static void initialize(final IProgressBar progressBar, Function<ForgePreferences, Void> adjustPrefs) {
+        // let the Claude AI profile find claude.properties in Forge's user folder (desktop and Android)
+        forge.ai.claude.ClaudeConfig.addSearchDir(new java.io.File(ForgeConstants.USER_DIR));
         ImageKeys.initializeDirs(
             ForgeConstants.CACHE_CARD_PICS_DIR, ForgeConstants.CACHE_CARD_PICS_SUBDIR,
             ForgeConstants.CACHE_TOKEN_PICS_DIR, ForgeConstants.CACHE_ICON_PICS_DIR,

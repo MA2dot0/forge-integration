@@ -1,0 +1,41 @@
+# Claude player for Forge
+# Copy this file to "claude.properties" in Forge's user data folder
+# (Windows: %APPDATA%\Forge, Linux/macOS: ~/.forge, Android: Forge's data folder)
+# or next to the Forge executable. Then pick the AI profile "Claude" for an AI player in the lobby.
+# Changes are picked up mid-game; no restart needed.
+
+# Your Anthropic API key (or leave empty and set the ANTHROPIC_API_KEY environment variable)
+api_key=
+
+# Model to use
+model=claude-sonnet-5-5
+
+# Max tokens per answer; extended thinking budget (0 = off; e.g. 2000 = slower but stronger)
+max_tokens=1024
+thinking_budget=0
+
+# Network
+timeout_seconds=90
+retries=3
+
+# When to ask Claude while it holds priority:
+#   smart = its own main phases, whenever something is on the stack, after blockers,
+#           the opponent's declare-attackers and end steps (cheaper, recommended)
+#   all   = every time it has priority and something is playable
+priority_mode=smart
+
+# Let Claude pick targets for its spells/abilities and for its triggered abilities
+choose_targets=true
+choose_trigger_targets=true
+
+# Show Claude's short reasoning in the game log
+show_reasoning=true
+
+# Write every question and answer to claude-forge.log (next to this file)
+log_to_file=true
+
+# How many recent game-log lines to include with each question
+log_lines=15
+
+# Optional extra instructions, e.g. a play style
+extra_instructions=
