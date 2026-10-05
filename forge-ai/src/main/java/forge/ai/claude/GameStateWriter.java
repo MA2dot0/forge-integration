@@ -1,7 +1,10 @@
 package forge.ai.claude;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Multiset;
@@ -108,9 +111,15 @@ public final class GameStateWriter {
             List<GameLogEntry> entries = game.getGameLog().getLogEntries(GameLogEntryType.STACK_ADD);
             if (!entries.isEmpty()) {
                 sb.append("\nRECENT EVENTS (newest last):\n");
-                int n = Math.min(logLines, entries.size());
-                for (int i = n - 1; i >= 0; i--) {
-                    sb.append("  - ").append(oneLine(entries.get(i).message(), 200)).append('\n');
+                // Claude's own reasoning lines are left out here (its notes carry what it wants to remember)
+                List<String> recent = new java.util.ArrayList<>();
+                for (GameLogEntry e : entries) {
+                    if (e.message() == null || e.message().contains("(Claude):")) continue;
+                    recent.add(oneLine(e.message(), 200));
+                    if (recent.size() >= logLines) break;
+                }
+                for (int i = recent.size() - 1; i >= 0; i--) {
+                    sb.append("  - ").append(recent.get(i)).append('\n');
                 }
             }
         }
@@ -221,6 +230,49 @@ public final class GameStateWriter {
             }
         }
         return sb.toString();
+    }
+
+    /** Your library contents (you know your decklist; the order is hidden). */
+    public static String library(Player me) {
+        CardCollectionView lib = me.getCardsIn(ZoneType.Library);
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Card c : lib) counts.merge(c.getName(), 1, Integer::sum);
+        List<Map.Entry<String, Integer>> es = new java.util.ArrayList<>(counts.entrySet());
+        es.sort((a, b) -> b.getValue() - a.getValue());
+        StringBuilder sb = new StringBuilder("YOUR LIBRARY (").append(lib.size()).append(" cards, order unknown): ");
+        boolean first = true;
+        for (Map.Entry<String, Integer> e : es) {
+            if (!first) sb.append(", ");
+            first = false;
+            sb.append(e.getValue()).append(' ').append(e.getKey());
+        }
+        return sb.append('\n').toString();
+    }
+
+    /** Official rulings (from the Scryfall cache) for the given cards; never blocks on the network. */
+    public static String rulingsSection(Collection<Card> cards, Scryfall scryfall, int perCard) {
+        if (perCard <= 0) return "";
+        StringBuilder sb = new StringBuilder();
+        Set<String> seen = new LinkedHashSet<>();
+        Set<String> missing = new LinkedHashSet<>();
+        for (Card c : cards) {
+            if (c == null || c.isToken() || c.isFaceDown() || (c.isLand() && c.getType().isBasic())) continue;
+            String name = c.getName();
+            if (!seen.add(name)) continue;
+            List<String> r = scryfall.cachedRulings(name);
+            if (r == null) {
+                missing.add(name);
+                continue;
+            }
+            if (r.isEmpty()) continue;
+            sb.append("  ").append(name).append(":\n");
+            for (int i = 0; i < Math.min(perCard, r.size()); i++) {
+                sb.append("    - ").append(oneLine(r.get(i), 260)).append('\n');
+            }
+            if (r.size() > perCard) sb.append("    (").append(r.size() - perCard).append(" more: use scryfall_card if needed)\n");
+        }
+        if (!missing.isEmpty()) scryfall.prefetch(missing);
+        return sb.length() == 0 ? "" : "\nOFFICIAL RULINGS for cards in this decision:\n" + sb;
     }
 
     public static String rulesText(Card c) {

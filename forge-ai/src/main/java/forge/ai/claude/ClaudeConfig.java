@@ -30,6 +30,8 @@ public final class ClaudeConfig {
     public final int thinkingBudget;
     public final int timeoutSeconds;
     public final int retries;
+    /** Upper bound on how long one decision may wait for the API before the Forge AI takes over. */
+    public final int maxWaitSeconds;
     /** "smart" = only ask at meaningful moments; "all" = every time priority is received with a playable option. */
     public final String priorityMode;
     public final boolean chooseTargets;
@@ -39,6 +41,27 @@ public final class ClaudeConfig {
     public final int logLines;
     public final String extraInstructions;
     public final File sourceFile;
+
+    // help from the Forge AI
+    public final boolean aiSuggestions;
+    public final boolean combatMath;
+    public final boolean simulate;
+    public final int simDepth;
+    public final int simTimeMs;
+
+    // memory
+    public final boolean notes;
+    public final boolean deckInfo;
+    public final boolean lessons;
+    public final boolean reviewAfterGame;
+    public final String reviewModel;
+    public final int maxLessons;
+
+    // Scryfall
+    public final boolean rulings;
+    public final int rulingsPerCard;
+    public final boolean scryfallLookup;
+    public final int maxLookups;
 
     private ClaudeConfig(Properties p, File src) {
         String key = p.getProperty("api_key", "").trim();
@@ -50,9 +73,11 @@ public final class ClaudeConfig {
         model = p.getProperty("model", "claude-sonnet-5-5").trim();
         apiUrl = p.getProperty("api_url", "https://api.anthropic.com/v1/messages").trim();
         maxTokens = intProp(p, "max_tokens", 1024);
-        thinkingBudget = intProp(p, "thinking_budget", 0);
+        int tb = intProp(p, "thinking_budget", 0);
+        thinkingBudget = tb <= 0 ? 0 : Math.max(1024, tb); // the API minimum is 1024
         timeoutSeconds = intProp(p, "timeout_seconds", 90);
         retries = intProp(p, "retries", 3);
+        maxWaitSeconds = Math.max(10, intProp(p, "max_wait_seconds", 120));
         priorityMode = p.getProperty("priority_mode", "smart").trim().toLowerCase();
         chooseTargets = boolProp(p, "choose_targets", true);
         chooseTriggerTargets = boolProp(p, "choose_trigger_targets", true);
@@ -61,6 +86,25 @@ public final class ClaudeConfig {
         logLines = intProp(p, "log_lines", 15);
         extraInstructions = p.getProperty("extra_instructions", "").trim();
         sourceFile = src;
+
+        aiSuggestions = boolProp(p, "ai_suggestions", true);
+        combatMath = boolProp(p, "combat_math", true);
+        simulate = boolProp(p, "simulate", true);
+        simDepth = intProp(p, "sim_depth", 1);
+        simTimeMs = intProp(p, "sim_time_ms", 2000);
+
+        notes = boolProp(p, "notes", true);
+        deckInfo = boolProp(p, "deck_info", true);
+        lessons = boolProp(p, "lessons", true);
+        reviewAfterGame = boolProp(p, "review_after_game", true);
+        String rm = p.getProperty("review_model", "").trim();
+        reviewModel = rm.isEmpty() ? model : rm;
+        maxLessons = intProp(p, "max_lessons", 40);
+
+        rulings = boolProp(p, "rulings", true);
+        rulingsPerCard = intProp(p, "rulings_per_card", 4);
+        scryfallLookup = boolProp(p, "scryfall_lookup", true);
+        maxLookups = intProp(p, "max_lookups", 2);
     }
 
     private static int intProp(Properties p, String k, int def) {
@@ -123,9 +167,21 @@ public final class ClaudeConfig {
         return cached;
     }
 
-    public File logFile() {
-        File dir = sourceFile != null ? sourceFile.getAbsoluteFile().getParentFile()
+    /** Folder for the log, lessons and rulings cache: next to claude.properties (or the working dir). */
+    public File dataDir() {
+        return sourceFile != null ? sourceFile.getAbsoluteFile().getParentFile()
                 : new File(System.getProperty("user.dir", "."));
-        return new File(dir, "claude-forge.log");
+    }
+
+    public File logFile() {
+        return new File(dataDir(), "claude-forge.log");
+    }
+
+    public File lessonsFile() {
+        return new File(dataDir(), "claude-lessons.txt");
+    }
+
+    public File rulingsCacheFile() {
+        return new File(dataDir(), "claude-rulings-cache.json");
     }
 }

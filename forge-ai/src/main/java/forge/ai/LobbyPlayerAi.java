@@ -41,8 +41,12 @@ public class LobbyPlayerAi extends LobbyPlayer implements IGameEntitiesFactory {
     }
 
     private PlayerControllerAi createControllerFor(Player ai) {
+        return createControllerFor(ai, isClaudeProfile());
+    }
+
+    private PlayerControllerAi createControllerFor(Player ai, boolean claude) {
         // The "Claude" AI profile hands decisions to Claude via the Anthropic API (see PlayerControllerClaude).
-        PlayerControllerAi result = isClaudeProfile()
+        PlayerControllerAi result = claude
                 ? new PlayerControllerClaude(ai.getGame(), ai, this)
                 : new PlayerControllerAi(ai.getGame(), ai, this);
         result.getAi().setUseSimulation(option);
@@ -51,7 +55,9 @@ public class LobbyPlayerAi extends LobbyPlayer implements IGameEntitiesFactory {
 
     @Override
     public PlayerController createMindSlaveController(Player master, Player slave) {
-        return createControllerFor(slave);
+        // Claude's prompts are written from the controlled player's point of view ("you play to win"),
+        // so when Claude controls an opponent's turn the plain Forge AI plays it instead.
+        return createControllerFor(slave, false);
     }
 
     @Override

@@ -71,7 +71,18 @@ public class GameCopier {
     public Game makeCopy(PhaseType advanceToPhase, Player aiPlayer) {
         if (origGame.EXPERIMENTAL_RESTORE_SNAPSHOT) {
             // How do we advance to phase when using restores?
-            return snapshot.makeCopy();
+            // Claude players must not be recreated as API-calling controllers in a simulated copy
+            boolean hasClaude = false;
+            List<RegisteredPlayer> replaced = new ArrayList<>();
+            for (RegisteredPlayer p : origGame.getMatch().getPlayers()) {
+                if (p.getPlayer() instanceof LobbyPlayerAi lpa && lpa.isClaudeProfile()) {
+                    hasClaude = true;
+                    replaced.add(clonePlayer(p));
+                } else {
+                    replaced.add(p);
+                }
+            }
+            return hasClaude ? snapshot.makeCopy(replaced, true) : snapshot.makeCopy();
         }
 
         List<RegisteredPlayer> origPlayers = origGame.getMatch().getPlayers();
@@ -214,6 +225,11 @@ public class GameCopier {
         if (!(lp instanceof LobbyPlayerAi)) {
             // TODO should probably also override them if they're normal AI
             lp = new LobbyPlayerAi(p.getPlayer().getName(), Sets.newHashSet(AIOption.USE_FULL_SIMULATION));
+        } else if (((LobbyPlayerAi) lp).isClaudeProfile()) {
+            // simulated copies of a Claude player must never call the API: use the plain Forge AI there
+            LobbyPlayerAi plain = new LobbyPlayerAi(lp.getName(), null);
+            plain.setAiProfile("Default");
+            lp = plain;
         }
         clone.setPlayer(lp);
         return clone;

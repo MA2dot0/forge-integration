@@ -39,3 +39,37 @@ log_lines=15
 
 # Optional extra instructions, e.g. a play style
 extra_instructions=
+
+# ---- Help from the Forge AI ----
+# Show the built-in AI's own choice as a second opinion at each decision
+ai_suggestions=true
+# Exact damage / lethal / block-outcome numbers computed by the engine
+combat_math=true
+# Simulate each candidate play on a copy of the game and show the score change
+simulate=true
+# 0 = just that play, 1 = that play plus the best follow-up play (slower)
+sim_depth=1
+# Time budget for simulations per decision, in milliseconds
+sim_time_ms=2000
+
+# ---- Memory ----
+# Running notes Claude keeps during a game
+notes=true
+# Show the remaining contents of Claude's library (it knows its own decklist)
+deck_info=true
+# Use claude-lessons.txt (lessons from earlier games) in every game
+lessons=true
+# After each game, let Claude review its play and add lessons to claude-lessons.txt
+review_after_game=true
+# Model for the review (empty = same as model)
+review_model=
+# How many of the newest lessons to use
+max_lessons=40
+
+# ---- Scryfall ----
+# Attach official rulings for the cards in each decision (fetched once, cached in claude-rulings-cache.json)
+rulings=true
+rulings_per_card=4
+# Let Claude search Scryfall / look up a card mid-decision, at most max_lookups times per decision
+scryfall_lookup=true
+max_lookups=2
