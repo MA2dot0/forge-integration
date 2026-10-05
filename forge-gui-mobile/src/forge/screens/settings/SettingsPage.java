@@ -62,6 +62,7 @@ public class SettingsPage extends TabPage<SettingsScreen> {
         lstSettings.addGroup(Forge.getLocalizer().getMessage("lblVibrationOptions"));
         lstSettings.addGroup(Forge.getLocalizer().getMessage("SoundOptions"));
         lstSettings.addGroup(Forge.getLocalizer().getMessage("ServerPreferences"));
+        lstSettings.addGroup("Claude AI player");
 
         // GENERAL SETTINGS TAB
         lstSettings.addItem(new CustomSelectSetting(FPref.UI_LANGUAGE, Forge.getLocalizer().getMessage("cbpSelectLanguage"),
@@ -763,6 +764,19 @@ public class SettingsPage extends TabPage<SettingsScreen> {
             ForgeNetPreferences.FNetPref.NET_AFK_TIMEOUT,
             Forge.getLocalizer().getMessage("lblAfkTimeout"),
             Forge.getLocalizer().getMessage("nlAfkTimeout"), 0, 60), 8);
+
+        // CLAUDE AI PLAYER (choose the "Claude" AI profile under Gameplay Options to play against it)
+        lstSettings.addItem(new ClaudeTextSetting("api_key", "Claude API key",
+            "Your Anthropic API key. Needed for the 'Claude' AI profile (Gameplay Options > AI Profile). "
+            + "Stored in claude.properties in Forge's data folder.", true), 9);
+        lstSettings.addItem(new ClaudeTextSetting("model", "Claude model",
+            "Model name used for Claude's decisions, e.g. claude-sonnet-5-5.", false), 9);
+        lstSettings.addItem(new ClaudeToggleSetting("simulate", "Claude: simulate plays",
+            "Let Forge simulate each candidate play and show Claude the result. Turn off on slow phones."), 9);
+        lstSettings.addItem(new ClaudeToggleSetting("show_reasoning", "Claude: show reasoning",
+            "Show Claude's short reason for each decision in the game log."), 9);
+        lstSettings.addItem(new ClaudeToggleSetting("review_after_game", "Claude: learn after each game",
+            "After each game Claude reviews its play and writes lessons it uses in later games."), 9);
     }
 
     public void refreshSkinsList() {
@@ -1086,6 +1100,68 @@ public class SettingsPage extends TabPage<SettingsScreen> {
                 value = "";
             }
             g.drawText(value, font, color, x, y, w, h, false, Align.right, false);
+        }
+    }
+
+    /** A text value stored in claude.properties rather than Forge preferences. */
+    private class ClaudeTextSetting extends Setting {
+        private final String key;
+        private final boolean secret;
+
+        ClaudeTextSetting(String key0, String label0, String description0, boolean secret0) {
+            super(null, label0 + ":", description0);
+            key = key0;
+            secret = secret0;
+        }
+
+        private String current() {
+            forge.ai.claude.ClaudeConfig cfg = forge.ai.claude.ClaudeConfig.get();
+            return "api_key".equals(key) ? cfg.apiKey : cfg.model;
+        }
+
+        @Override
+        public void select() {
+            FOptionPane.showInputDialog(description, label, current(), null, input -> {
+                if (input == null) return;
+                forge.ai.claude.ClaudeConfig.saveSetting(key, input.trim());
+            }, false);
+        }
+
+        @Override
+        public void drawPrefValue(Graphics g, FSkinFont font, FSkinColor color, float x, float y, float w, float h) {
+            String v = current();
+            String shown = secret ? forge.ai.claude.ClaudeConfig.maskedKey(v) : (v == null || v.isEmpty() ? "default" : v);
+            g.drawText(shown, font, color, x, y, w, h, false, Align.right, false);
+        }
+    }
+
+    /** An on/off value stored in claude.properties. */
+    private class ClaudeToggleSetting extends Setting {
+        private final String key;
+
+        ClaudeToggleSetting(String key0, String label0, String description0) {
+            super(null, label0, description0);
+            key = key0;
+        }
+
+        private boolean current() {
+            forge.ai.claude.ClaudeConfig cfg = forge.ai.claude.ClaudeConfig.get();
+            switch (key) {
+                case "simulate": return cfg.simulate;
+                case "show_reasoning": return cfg.showReasoning;
+                case "review_after_game": return cfg.reviewAfterGame;
+                default: return false;
+            }
+        }
+
+        @Override
+        public void select() {
+            forge.ai.claude.ClaudeConfig.saveSetting(key, String.valueOf(!current()));
+        }
+
+        @Override
+        public void drawPrefValue(Graphics g, FSkinFont font, FSkinColor color, float x, float y, float w, float h) {
+            g.drawText(current() ? "On" : "Off", font, color, x, y, w, h, false, Align.right, false);
         }
     }
 

@@ -85,7 +85,14 @@ public class AiProfileUtil {
         loadedProfiles.clear();
         List<String> availableProfiles = getAvailableProfiles();
         for (String profile : availableProfiles) {
-            loadedProfiles.put(profile, loadProfile(profile));
+            if (new File(buildFileName(profile)).isFile()) {
+                loadedProfiles.put(profile, loadProfile(profile));
+            }
+        }
+        // the Claude profile plays its fallback decisions like Default when no Claude.ai file is installed
+        // (e.g. on Android, where the res folder is downloaded separately from the app)
+        if (!loadedProfiles.containsKey(LobbyPlayerAi.CLAUDE_PROFILE) && loadedProfiles.containsKey("Default")) {
+            loadedProfiles.put(LobbyPlayerAi.CLAUDE_PROFILE, loadedProfiles.get("Default"));
         }
     }
     
@@ -171,6 +178,10 @@ public class AiProfileUtil {
             }
         }
 
+        // always offer Claude, even when the downloaded resources don't include Claude.ai
+        if (!availableProfiles.isEmpty() && !availableProfiles.contains(LobbyPlayerAi.CLAUDE_PROFILE)) {
+            availableProfiles.add(LobbyPlayerAi.CLAUDE_PROFILE);
+        }
         return availableProfiles;
     }
     

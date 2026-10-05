@@ -168,6 +168,53 @@ public final class ClaudeConfig {
     }
 
     /** Folder for the log, lessons and rulings cache: next to claude.properties (or the working dir). */
+    /**
+     * Writes one setting into claude.properties (used by the in-app settings screen, e.g. on Android where the
+     * Forge folder is hard to reach). Keeps comments and other lines; creates the file in Forge's user folder.
+     */
+    public static synchronized void saveSetting(String key, String value) {
+        File target = null;
+        for (File f : candidateFiles()) {
+            if (f.isFile()) { target = f; break; }
+        }
+        if (target == null) {
+            File dir = !extraDirs.isEmpty() ? extraDirs.get(0) : new File(System.getProperty("user.dir", "."));
+            target = new File(dir, "claude.properties");
+        }
+        List<String> lines = new ArrayList<>();
+        try {
+            if (target.isFile()) lines.addAll(java.nio.file.Files.readAllLines(target.toPath(), java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            System.err.println("[Claude] could not read " + target + ": " + e);
+        }
+        String clean = value == null ? "" : value.replace("\r", "").replace("\n", "").trim();
+        boolean replaced = false;
+        for (int i = 0; i < lines.size(); i++) {
+            String t = lines.get(i).trim();
+            if (t.startsWith("#") || t.startsWith("!")) continue;
+            int eq = t.indexOf('=');
+            if (eq > 0 && t.substring(0, eq).trim().equals(key)) {
+                lines.set(i, key + "=" + clean);
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) lines.add(key + "=" + clean);
+        try {
+            if (target.getParentFile() != null) target.getParentFile().mkdirs();
+            java.nio.file.Files.write(target.toPath(), lines, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            System.err.println("[Claude] could not write " + target + ": " + e);
+        }
+        cachedStamp = -1; // re-read on next use
+    }
+
+    /** The key with all but the last 4 characters hidden, for display. */
+    public static String maskedKey(String key) {
+        if (key == null || key.isEmpty()) return "not set";
+        return key.length() <= 8 ? "set" : key.substring(0, Math.min(7, key.length() - 4)) + "…" + key.substring(key.length() - 4);
+    }
+
     public File dataDir() {
         return sourceFile != null ? sourceFile.getAbsoluteFile().getParentFile()
                 : new File(System.getProperty("user.dir", "."));
